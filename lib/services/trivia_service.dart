@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/question.dart';
 
 class TriviaService {
-  static const _baseUrl = 'https://quizapi.io/api/v1/questions';
+  static const String _baseUrl = 'https://quizapi.io/api/v1/questions';
 
   static Future<List<Question>> fetchQuestions({
     required String apiKey,
@@ -26,23 +26,30 @@ class TriviaService {
       'random': 'true',
     });
 
-    final response = await http.get(
-      uri,
-      headers: {'Authorization': 'Bearer $apiKey'},
-    ).timeout(const Duration(seconds: 10));
+    try {
+      final response = await http
+          .get(
+            uri,
+            headers: {'Authorization': 'Bearer $apiKey'},
+          ).timeout(const Duration(seconds: 10));
 
-    if (response.statusCode != 200) {
-      throw Exception('HTTP error: ${response.statusCode}');
+
+      if (response.statusCode != 200) {
+        throw Exception('HTTP error: ${response.statusCode}');
+      }
+
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      if (data['success'] != true) {
+        throw Exception('API returned success=false');
+      }
+
+      final results = data['data'] as List? ?? [];
+      return results
+          .map((e) => Question.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+    } catch (e) {
+      throw Exception('Could not load questions: $e');
     }
-
-    final body = json.decode(response.body) as Map<String, dynamic>;
-    if (body['success'] != true) {
-      throw Exception('API returned success=false');
-    }
-
-    final data = body['data'] as List? ?? [];
-    return data
-        .map((item) => Question.fromJson(item as Map<String, dynamic>))
-        .toList();
   }
 }
